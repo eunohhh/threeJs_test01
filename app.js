@@ -243,6 +243,8 @@ function modelLoader(model, position){
                 scaleFactor = 10 / Math.max(size.x, size.y, size.z);
             gltf.scene.scale.set(scaleFactor, scaleFactor, scaleFactor);
 
+            objGroup.add(gltf.scene);
+
             gltf.scene.traverse(function(object){
                 if ( object.isMesh ) {
                     object.castShadow = true;
@@ -259,9 +261,10 @@ function modelLoader(model, position){
             gltf.scene.number = model._id;
             gltf.scene.scaleFactor = scaleFactor;
             gltf.scene.children[0].customProperty = 'obj';
-            gltf.scene.position.set(position.x, position.y, position.z)
+            gltf.scene.position.set(position.x, position.y, position.z);
+            objGroup.customProperty = 'objsGroup';
+            scene.add(objGroup); 
     
-            objGroup.add(gltf.scene);
             resolve(gltf.scene); // Resolve the promise when the model has loaded
 
         }, ( xhr ) => {
@@ -296,7 +299,7 @@ function modelDispose(target){
         if (target.material !== undefined && target.material !== null) target.material.dispose();
         if (target.material.map !== undefined && target.material.map !== null) target.material.map.dispose();
 }
-objGroup.customProperty = 'objsGroup';
+
 gltfObjs.forEach((e, i)=>{
     modelLoader(e, e.position)
         .then((v)=>{
@@ -308,14 +311,21 @@ gltfObjs.forEach((e, i)=>{
                 v.rotation.y = -Math.PI / 2;
                 v.scale.set(4,4,4);
             }
-
             loadingCount += 1;
         })
-        .catch((error) => {
-            console.error("There was an error loading the model:", error);
-        });
-})
-scene.add(objGroup); 
+});
+
+
+for(let i=0; i<spotLigthtInfo.length; i++){
+    const e = spotLigthtInfo[i];
+    lightObject['spot'+ i] = createSpotlight(e.position, e.l, objGroup.children[i], gltfObjs[i].position, e.shadow);
+}
+
+for(const spot of Object.values(lightObject)){
+    spotLightGroup.add(spot);
+    scene.add(spot.target)
+}
+scene.add(spotLightGroup);
 
 
 /** ====================================== pedestal ==================================================== */
@@ -347,11 +357,11 @@ const light = new THREE.HemisphereLight( 0xffffff, 0xffffff, 0.1 );
 scene.add(light);
 
 // Spotlights can be used to simulate ceiling-mounted lights or track lights that focus on specific areas or artworks.
-function createSpotlight(position, intensity, targetPosition, shadow) {
+function createSpotlight(position, intensity, targetPosition, emer, shadow) {
     const spotlight = new THREE.SpotLight(0xffffff, intensity);
     spotlight.position.set(position.x, position.y, position.z);
-    const posi = targetPosition.position
-    spotlight.target.position.copy(posi); 
+    targetPosition ? spotlight.target.position.copy(targetPosition.position) : spotlight.target.position.copy(emer); 
+    // spotlight.target.position.copy(emer); 
     shadow ? spotlight.castShadow = true : spotlight.castShadow = false;
     spotlight.angle = Math.PI / 3; 
     spotlight.penumbra = 1; 
@@ -366,22 +376,6 @@ function createSpotlight(position, intensity, targetPosition, shadow) {
 
 // const getWallTargets = scene.getObjectsByProperty('customProperty', 'paintingss');
 // const getPedeTargets = scene.getObjectsByProperty('customProperty', 'pedestal'); // get name???
-
-// Add spotlights to the scene, The spotlight target is the painting position
-setTimeout(()=>{
-    console.log(objGroup.children)
-    objGroup.children.reverse();
-
-    spotLigthtInfo.forEach((e, i)=>{
-        lightObject['spot'+ i] = createSpotlight(e.position, e.l, objGroup.children[i], e.shadow);
-    });
-    scene.add(spotLightGroup);
-    for(const spot of Object.values(lightObject)){
-        spotLightGroup.add(spot);
-        scene.add(spot.target)
-    }
-
-},1000)
 
 /** ============================================= wall, floor, ceiling ================================================= */
 function loadTexture(url){
@@ -524,7 +518,7 @@ function checkCollision() {
     camera.getWorldPosition(cameraWorldPosition); 
     playerBoundingBox.setFromCenterAndSize(
         cameraWorldPosition,
-        new THREE.Vector3(1.5, 1.5, 1.5)
+        new THREE.Vector3(1.7, 1.7, 1.7)
     );
     // loop through each wall
     for(let i = 0; i < wallGroup.children.length; i++) {
@@ -760,15 +754,12 @@ document.addEventListener('touchend', (e)=>{
         controller.onTouchEnd(e)
     }
 });
-setTimeout(()=>{
-    paintingGroup.children.forEach((e,i)=>{
-        mergeArr.push(e.position);
-        infoArr.push(e.userData);
-    })
-    // console.log(paintingGroup.children)
-    // console.log(mergeArr)
-
-}, 1000);
+// setTimeout(()=>{
+//     paintingGroup.children.forEach((e,i)=>{
+//         mergeArr.push(e.position);
+//         infoArr.push(e.userData);
+//     })
+// }, 1000);
 
 /** =============================================== functions ===================================================== */
 function setScreenSize() {
@@ -842,7 +833,7 @@ function delCache(){
 }
 
 function informDisplay() {
-    const distanceThreshold = 14; // Set the distance threshold for displaying the painting information
+    const distanceThreshold = 17; // Set the distance threshold for displaying the painting information
 
     let shouldHide = true;
 
@@ -891,9 +882,10 @@ function control() {
     }
 }
 function octaAnimation(){
-    if(objGroup.children[1]){
-        objGroup.children[1].rotation.y += 0.001; // slowly rotate the model
-        objGroup.children[1].position.y = -9 + Math.sin(Date.now() / 1000) * 1; // slowly move up and down
+    if(objGroup.getObjectByName("object02")){
+        const to = objGroup.getObjectByName("object02");
+        to.rotation.y += 0.001; // slowly rotate the model
+        to.position.y = -9 + Math.sin(Date.now() / 1000) * 1; // slowly move up and down
     }
 }
 
