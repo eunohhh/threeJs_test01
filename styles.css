@@ -70,6 +70,13 @@ canvas {
   font-size: 1.6em;
   display: none;
 }
+.xyz-none-landscape h3{
+  color: #fff;
+  font-size: 2rem;
+  font-weight: 600;
+  font-family: 'IBM Plex Sans KR', 'sans-serif';
+  text-align: center;
+}
 #xyz-gallery-gui{
   width: 100vw;
   height: 100vh;
@@ -174,6 +181,7 @@ canvas {
 
 #xyz-gallery-menu #xyz-gallery-content div {
   margin-bottom: 1em;
+  margin-top: 1.1em;
 }
 
 #xyz-gallery-menu h1 {
@@ -208,7 +216,6 @@ canvas {
   background-color: transparent;
   border: 1px solid #fff;
   color: #fff;
-  border-radius: 0.5em;
   padding: 0.2em 1em;
   font-weight: 600;
   font-size: 1.4em;
@@ -368,7 +375,12 @@ canvas {
 
 .xyz-keys {
   position: fixed;
-  display: block;
+  display: flex;
+  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  flex-wrap: wrap;
+  align-content: flex-start;
   text-align: center;
   width: auto;
   height: auto;
@@ -376,7 +388,11 @@ canvas {
   bottom: 10px;
   right: 15px;
 }
-
+.xyz-below-keys{
+  display: flex;
+  justify-content: center;
+  flex-direction: row;
+}
 .arr {
   cursor: pointer;
   width: 36px;
@@ -388,7 +404,9 @@ canvas {
   color: white;
   font-size: 20px;
   border: 2px solid #fff;
-  display: inline-block;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   margin: 2px;
   transition: all .05s linear;
   &:active {
@@ -404,7 +422,7 @@ canvas {
 }
 
 .xyz-space {
-  width: 122px;
+  width: 96%;
   height: 12px;
   margin-top: 6px;
 }
@@ -424,8 +442,11 @@ canvas {
     line-height: 30px;
     font-size: 16px;
   }
+  .arr span{
+    font-size: 16px;
+  }
   .xyz-space{
-    width: 104px;
+    width: 96%;
     height: 16px;
   }
 }

@@ -130,11 +130,11 @@ topDiv.insertAdjacentElement('beforeend', menuTop);
 
 const keysDiv = document.createElement('div');
         keysDiv.setAttribute('class', 'xyz-keys');
-const keyInsert = `<div class="xyz-up arr" data-arrow="ArrowUp"><span class="material-icons-outlined" data-arrow="ArrowUp">arrow_upward</span></div><br />
-<div class="xyz-left arr" data-arrow="ArrowLeft"><span class="material-icons-outlined" data-arrow="ArrowLeft">arrow_back</span></div>  
+const keyInsert = `<div class="xyz-up arr" data-arrow="ArrowUp"><span class="material-icons-outlined" data-arrow="ArrowUp">arrow_upward</span></div>
+<div class="xyz-below-keys"><div class="xyz-left arr" data-arrow="ArrowLeft"><span class="material-icons-outlined" data-arrow="ArrowLeft">arrow_back</span></div>  
 <div class="xyz-down arr" data-arrow="ArrowDown"><span class="material-icons-outlined" data-arrow="ArrowDown">arrow_downward</span></div>
-<div class="xyz-right arr" data-arrow="ArrowRight"><span class="material-icons-outlined" data-arrow="ArrowRight">arrow_forward</span></div>
-<br /><div class="xyz-space arr" data-arrow="space"></div>`;
+<div class="xyz-right arr" data-arrow="ArrowRight"><span class="material-icons-outlined" data-arrow="ArrowRight">arrow_forward</span></div></div>
+<div class="xyz-space arr" data-arrow="space"></div>`;
 keysDiv.insertAdjacentHTML('beforeend', keyInsert);
 topDiv.insertAdjacentElement('beforeend', keysDiv);
 
@@ -154,7 +154,16 @@ const camera = new THREE.PerspectiveCamera(
     0.1, 
     1000 
 );
+
 const renderer = new THREE.WebGLRenderer({ antialias: true });
+
+const sphereRenderTarget = new THREE.WebGLCubeRenderTarget(128, {
+    format: THREE.RGBAFormat,
+    generateMipmaps: true,
+    minFilter: THREE.LinearMipmapLinearFilter
+});
+sphereRenderTarget._pmremGen = new THREE.PMREMGenerator(renderer);
+const steelCamera = new THREE.CubeCamera( 0.1, 1000, sphereRenderTarget);
 
 // Scene:Setup
 scene.background = new THREE.Color('gray');
@@ -254,6 +263,7 @@ function modelLoader(model, position){
                     object.receiveShadow = true;
                 }
             })
+
             gltf.scene.castShadow = true;
             gltf.scene.receiveShadow = true;
             gltf.scene.name = model.userdata.info.title;
@@ -264,6 +274,16 @@ function modelLoader(model, position){
             gltf.scene.position.set(position.x, position.y, position.z);
             objGroup.customProperty = 'objsGroup';
             scene.add(objGroup); 
+
+
+            if(gltf.scene.name === 'object01'){
+                // console.log(gltf.scene)
+
+                gltf.scene.add(steelCamera)
+                // gltf.scene.children[0].material.combine = THREE.MixOperation;
+                gltf.scene.children[0].material.envMapIntensity = 1; 
+                gltf.scene.children[0].material.reflectivity = 1; 
+            }
     
             resolve(gltf.scene); // Resolve the promise when the model has loaded
 
@@ -585,6 +605,7 @@ function showMenu() {
 
 // Controls:Listeners
 document.addEventListener('keydown', ( e ) => {
+    // console.log(controls)
     if(preventKeyFlag){
         e.preventDefault();
     }else if(['w','a','s','d','ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Escape'].includes(e.key)){
@@ -905,7 +926,10 @@ function update() {
     octaAnimation();
 }  
 function render() {
-    renderer.render(scene, camera);
+    return new Promise((resolve, reject) => {
+        renderer.render(scene, camera);
+        resolve(scene, camera);
+    })
 } 
 async function loop() {
     if(basicMenu.style.display !== 'none'){
@@ -925,11 +949,30 @@ async function loop() {
     requestAnimationFrame(loop);
 
     update();
-    render();
+    render()
+        .then((scene, camera)=>{
+            // console.log(scene.children)
+            const obj01 = scene.getObjectByName('object01')
+            const steel = obj01.children[0]
+            const cubeCamera = obj01.children[2];
+            // const steel = scene.children[10].children[0].children[0]
+            // const cubeCamera = scene.children[10].children[0].children[2];
+            steel.visible = false;
+            cubeCamera.position.copy( steel.position )
+            cubeCamera.update( renderer, scene );
+
+            const renderTarget = cubeCamera.renderTarget._pmremGen.fromCubemap(
+                cubeCamera.renderTarget.texture);
+
+            steel.material.envMap = renderTarget.texture;
+            // steel.material.envMap = sphereRenderTarget.texture;
+
+
+            steel.visible = true;
+
+            // renderer.render( scene, camera )
+
+        })
+        .catch((err)=> console.log(err))
 }  
 loop();
-
-
-
-
-
